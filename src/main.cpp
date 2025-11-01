@@ -309,7 +309,17 @@ void toggleTongue() //lift or lower tongue
 		Toungue.set_value(false);
 	}
 }
-void auton1()
+void autonright(){
+	holdEnabled = false;
+	chassis.setPose(-48, -16, 110);
+	intakeIndex();
+	pros::delay(20);
+	chassis.moveToPose(-12,-26,110, 4500);
+	pros::delay(4000);
+	chassis.moveToPose();
+
+}
+void autonleft()
 {
 	holdEnabled=false;
 	chassis.setPose(-48, 16, 60);
@@ -317,7 +327,7 @@ void auton1()
 	intakeIndex();
 	pros::delay(1000);
 
-	chassis.moveToPose(-27, 29, 60, 4500);
+	chassis.moveToPose(-12, 29, 60, 4500);
 	pros::delay(4000);
 	chassis.moveToPose(-23,24,140,1500);
 	pros::delay(1500);
@@ -344,7 +354,7 @@ void auton1()
 void autonomous()
 {
 	// pidTUNE();
-	//auton1();
+	autonleft();
 }
 
 void opcontrol()
