@@ -2,8 +2,8 @@
 #pragma once
 #include "main.h"
 #include "lemlib/api.hpp" // IWYU pragma: keep
+#include "device/mockimu.h"
 
-#define VERTICAL_ODOM 13
 
 #define DRIVE_GEARSET pros::E_MOTOR_GEARSET_06
 #define WHEEL_DIAMETER 3.25
@@ -17,9 +17,8 @@
 #define RIGHT_MIDDLE_DRIVE 14
 #define RIGHT_BACK_DRIVE 15
 
-#define VERTICAL_ODOM 20
-#define IMU 20
-
+#define VERTICAL_ODOM -3
+#define IMU 5
 #define IntakeBottomRoller 9
 #define IntakeTopRoller 1
 #define IntakeLastWheel -6
@@ -36,8 +35,20 @@ inline pros::MotorGroup Intake_index_mg({IntakeBottomRoller, IntakeTopRoller});
 inline pros::MotorGroup LastWheel({IntakeLastWheel});
 
 inline pros::Rotation vertical_odom(VERTICAL_ODOM);
+inline MockIMU imu(IMU, 361.5/360.0);
+//0
+//358.4
+//357.34
+//355.4
+//354.23
+//352.98
 
-//pneumatics
+//0
+//358.2
+//357.1
+//355.5
+
+
 
 inline pros::adi::Pneumatics lift(LIFT, false);
 inline pros::adi::Pneumatics scrape(SCRAPE, false);

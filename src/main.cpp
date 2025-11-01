@@ -2,26 +2,7 @@
 #include "config.h"
 #include "lemlib/api.hpp"
 
-class MockIMU : public pros::Imu
 
-{
-public:
-	MockIMU(int port, double gain)
-		: pros::Imu(port), imu_gain(gain) {}
-
-	double get_rotation() const override
-	{
-		double raw = pros::Imu::get_rotation();
-		if (raw == PROS_ERR_F)
-			return NAN;
-		return raw * imu_gain;
-	}
-
-private:
-	double imu_gain;
-};
-
-MockIMU imu(IMU, 361.5 / 360.0);
 pros::Controller controller(pros::E_CONTROLLER_MASTER);
 
 /**
@@ -57,7 +38,7 @@ lemlib::Drivetrain drivetrain(&left_mg,					  // left motor group
 							  450,						  // drivetrain rpm is 450
 							  2							  // horizontal drift is 2 (for now)
 );
-lemlib::TrackingWheel vertical_tracking_wheel(&vertical_odom, lemlib::Omniwheel::NEW_2, 0.5);
+lemlib::TrackingWheel vertical_tracking_wheel(&vertical_odom, lemlib::Omniwheel::NEW_2, 2.75);
 lemlib::OdomSensors sensors(&vertical_tracking_wheel, // vertical tracking wheel 1, set to null
 							nullptr,				  // vertical tracking wheel 2, set to nullptr as we are using IMEs
 							nullptr,				  // horizontal tracking wheel 1
@@ -66,9 +47,9 @@ lemlib::OdomSensors sensors(&vertical_tracking_wheel, // vertical tracking wheel
 );
 
 // lateral PID controller
-lemlib::ControllerSettings lateral_controller(9,   // proportional gain (kP)
+lemlib::ControllerSettings lateral_controller(2.6,   // proportional gain (kP)
 											  0,   // integral gain (kI)
-											  20,  // derivative gain (kD)
+											  9,  // derivative gain (kD)
 											  0,   // anti windup
 											  0,   // small error range, in inches
 											  100, // small error range timeout, in milliseconds
@@ -78,9 +59,9 @@ lemlib::ControllerSettings lateral_controller(9,   // proportional gain (kP)
 );
 
 // angular PID controller
-lemlib::ControllerSettings angular_controller(3.2, // proportional gain (kP)
+lemlib::ControllerSettings angular_controller(1.7, // proportional gain (kP)
 											  0,   // integral gain (kI)
-											  28,  // derivative gain (kD)
+											  15,  // derivative gain (kD)
 											  0,   // anti windup
 											  0,   // small error range, in degrees
 											  0,   // small error range timeout, in milliseconds
@@ -131,39 +112,45 @@ double WheelPos;
 double target = 0;
 double toutput = 0;
 bool holdEnabled = true;
-pros::Task *holdTask = nullptr;
-double holdTarget = 0;
-bool scoring = false;
+pros::Task *holdTask = nullptr;			// PID running or not
+double holdTarget = 0;				// PID target
+bool holdTargetNeedsUpdate = false; // flag to update target when PID re-enables
 void frontWheelHoldTask(void *)
 {
-	const double tkP = 2.0;
+	const double tkP = 40.0;
 	const double tkI = 0;
 	const double tkD = 2.0;
 
-	double terror = 0;
 	double tprevious_error = 0;
 	double tintegral = 0;
-	double tderivative = 0;
 
 	while (true)
 	{
 		if (!holdEnabled)
 		{
-			LastWheel.move(0);
+			holdTarget = 100000;
+			// LastWheel.move(0);
 			pros::delay(20);
 			continue;
 		}
+		if (holdTarget == 100000)
+			holdTarget = LastWheel.get_position() / 100.0;
+		// Update target if needed
+		if (holdTargetNeedsUpdate)
+		{
+			holdTarget = LastWheel.get_position() / 100.0;
+			holdTargetNeedsUpdate = false;
+		}
 
-		// Use the *global* holdTarget, not a local variable
 		double currentPos = LastWheel.get_position() / 100.0;
-		terror = holdTarget - currentPos;
-		tintegral += terror;
-		tderivative = terror - tprevious_error;
+		double error = holdTarget - currentPos;
+		tintegral += error;
+		double derivative = error - tprevious_error;
 
-		double toutput = tkP * terror + tkI * tintegral + tkD * tderivative;
-		LastWheel.move(toutput);
+		double output = tkP * error + tkI * tintegral + tkD * derivative;
+		LastWheel.move(output);
 
-		tprevious_error = terror;
+		tprevious_error = error;
 		pros::delay(20);
 	}
 }
@@ -173,8 +160,20 @@ void initialize()
 	pros::lcd::initialize();
 	holdTask = new pros::Task(frontWheelHoldTask, nullptr, "Hold Task");
 	holdTarget = LastWheel.get_position() / 100.0;
+	chassis.calibrate();
+	pros::Task screen_task([&]()
+							{
+        while (true) {
+			pros::screen::print(TEXT_MEDIUM, 0, "X: %f", chassis.getPose().x);
+			pros::screen::print(TEXT_MEDIUM, 1, "Y: %f", chassis.getPose().y);
+			pros::screen::print(TEXT_MEDIUM, 2, "Theta: %f", chassis.getPose().theta);
 
+			//pros::screen::print(TEXT_MEDIUM, 3, "IMU: %f", imu.get_heading());
+
+			pros::delay(20);
+        } });
 }
+
 
 void competition_initialize() {}
 
@@ -189,7 +188,6 @@ void competition_initialize() {}
  * will be stopped. Re-enabling the robot will restart the task, not re-start it
  * from where it left off.
  */
-void autonomous() {}
 
 /**
  * Runs the operator control code. This function will be started in its own task
@@ -204,109 +202,213 @@ void autonomous() {}
  * operator control task will be stopped. Re-enabling the robot will restart the
  * task, not resume it from where it left off.
  */
+
+
+
+
+void pidTUNE(){
+	while (true){
+	// chassis.turnToHeading(90,1000);
+	// pros::delay(2000);
+	// chassis.turnToHeading(0,1000);
+	// pros::delay(2000);
+	chassis.moveToPoint(0,48, 4000);
+	pros::delay(4000);
+	chassis.moveToPoint(0,0, 4000, {.forwards = false});
+	pros::delay(4000);
+	}
+}
 // bools
 bool IntakeToggle = false;
 bool IntakeReverse = false;
 bool IntakeEject = false;
 bool liftpress = false;
-bool scraper = false;
 bool tounguepress = false;
-void opcontrol()
+
+void intakeStop(){
+	Intake_mg.move(0);
+	Intake_index_mg.move(0);
+	Intake_eject_mg.move(0);
+}
+void intakeIndex() //  Indexing (R1)
 {
-	pros::Controller master(pros::E_CONTROLLER_MASTER);
+	holdEnabled = true;
+	Intake_index_mg.move(-127);
+	liftpress = false;
+	lift.set_value(false);
+}
 
-	while (true)
+void intakeScore() // Scoreing (L1)
+{
+	holdEnabled = false;
+	Intake_mg.move(-127);
+}
+
+void intakeReverse() //Reverse intake(R2)
+{
+	holdEnabled = false;
+	Intake_mg.move(127);
+}
+
+void intakeEject()
+{
+	holdEnabled = false;
+	Intake_eject_mg.move(-127);
+	liftpress = true;
+	lift.set_value(true);
+}
+
+void intakeStationary() //Nothing pressed — stop and re - enable hold
+{
+	Intake_index_mg.move(0);
+	Intake_mg.move(0);
+	Intake_eject_mg.move(0);
+	LastWheel.move(0);
+	holdEnabled = false;
+}
+
+//Track the position of the wheel when we want to enable hold pid
+void trackHoldTarget()
+{
+	if (holdEnabled)
 	{
-		pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
-						 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
-						 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0); // Prints status of the emulated screen LCDs
+		
+	}
+	if (!holdEnabled)
+	{
+		holdTarget = 100000;
+	}
+}
 
-		// Arcade control scheme
-		int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-		int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
+void toggleLift() //lift or lower intake
+{
+	liftpress = !liftpress;
+	if (liftpress)
+	{
 
-		// move the robot
-		chassis.arcade(leftY, rightX*0.8);
-		// index
-		//  Indexing (R1)
-		if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1))
-		{
-			holdEnabled = false; // disable hold while moving
-			Intake_index_mg.move(-127);
-			liftpress = false;
-			lift.set_value(false);
-		}
-		// Scoring (L1)
-		else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L1))
-		{
-			holdEnabled = false;
-			Intake_mg.move(-127);
-		}
-		// Reverse intake (R2)
-		else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R2))
-		{
-			holdEnabled = false;
-			Intake_mg.move(127);
-		}
-		// Nothing pressed — stop and re-enable hold
-		else
-		{
-			Intake_index_mg.move(0);
-			Intake_mg.move(0);
-			Intake_eject_mg.move(0);
+		lift.set_value(true);
+	}
+	else
+	{
 
-			// If we just released a button, capture the current position as new hold target
-			if (!holdEnabled)
+		lift.set_value(false);
+	}
+}
+
+void toggleTongue() //lift or lower tongue
+{
+	tounguepress = !tounguepress;
+	if (tounguepress)
+	{
+
+		Toungue.set_value(true);
+	}
+	else
+	{
+
+		Toungue.set_value(false);
+	}
+}
+void auton1()
+{
+	holdEnabled=false;
+	chassis.setPose(-48, 16, 60);
+	pros::delay(250);
+	intakeIndex();
+	pros::delay(1000);
+
+	chassis.moveToPose(-27, 29, 60, 4500);
+	pros::delay(4000);
+	chassis.moveToPose(-23,24,140,1500);
+	pros::delay(1500);
+	chassis.turnToHeading(300, 2000);
+	intakeStationary();
+	pros::delay(1000);
+	chassis.moveToPoint(-13, 15, 1000, {.forwards = false});
+	pros::delay(1500);
+	intakeScore();
+	pros::delay(500);
+	chassis.moveToPoint(-15,15,1000);
+	pros::delay(500);
+	chassis.moveToPoint(-13,15,1000, {.forwards = false});
+
+
+	// pros::delay(2000);
+	// intakeScore();
+	// pros::delay(2000);
+	// intakeReverse();
+	// pros::delay(2000);
+	// intakeIndex();
+	// pros::delay(10000);
+}
+void autonomous()
+{
+	// pidTUNE();
+	//auton1();
+}
+
+void opcontrol()
+
+	{
+		pros::Controller master(pros::E_CONTROLLER_MASTER);
+
+		while (true)
+		{
+			pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
+							 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
+							 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0); // Prints status of the emulated screen LCDs
+
+			// delay to save gi
+
+			// Arcade control scheme
+			int leftY = controller.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
+			int rightX = controller.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
+
+			// move the robot
+			chassis.arcade(leftY, rightX * 0.8);
+			// intake controls
+			//  index
+			//   Indexing (R1)
+			if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L1))
 			{
-				holdTarget = LastWheel.get_position() / 100.0;
-				holdEnabled = true;
+				intakeIndex();
 			}
-		}
-
-		if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_RIGHT)){
-			liftpress = !liftpress;
-			if (liftpress){
-
-			lift.set_value(true);	
-
-			}
-			else{
-
-			lift.set_value(false);
-			}
-		}
-
-		if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_LEFT)){
-			tounguepress = !tounguepress;
-			if (tounguepress)
+			// Scoring (L1)
+			else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1))
 			{
-
-				Toungue.set_value(true);
+				intakeScore();
 			}
+			// Reverse intake (R2)
+			else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R2))
+			{
+				intakeReverse();
+			}
+			else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2))
+			{
+				intakeEject();
+			}
+			// Nothing pressed — stop and re-enable hold
 			else
 			{
+				intakeStationary();
+				// If we just released a button, capture the current position as new hold target
+			}
 
-				Toungue.set_value(false);
+			// trackHoldTarget();
+
+			// buttons for pistons
+			if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_RIGHT))
+			{
+				toggleLift();
+			}
+
+			if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_LEFT))
+			{
+				toggleTongue();
 			}
 		}
-	}
-		// if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y))
-		// {
-		// 	scraper = !scraper;
-		// 	if (scraper)
-		// 	{
 
-		// 		scrape.set_value(true);
-		// 	}
-		// 	else
-		// 	{
-
-		// 		scrape.set_value(false);
-		// 	}
-		// }
-
-	// Sets right motor voltage
-	pros::delay(25); // Run for 20 ms then update
+		pros::delay(25); // Run for 20 ms then update
 	}
 
 
