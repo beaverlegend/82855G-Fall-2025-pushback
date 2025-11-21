@@ -47,9 +47,9 @@ lemlib::OdomSensors sensors(&vertical_tracking_wheel, // vertical tracking wheel
 );
 
 // lateral PID controller
-lemlib::ControllerSettings lateral_controller(2.6,   // proportional gain (kP)
+lemlib::ControllerSettings lateral_controller(2.0,   // proportional gain (kP)
 											  0,   // integral gain (kI)
-											  9,  // derivative gain (kD)
+											  7,  // derivative gain (kD)
 											  0,   // anti windup
 											  0,   // small error range, in inches
 											  100, // small error range timeout, in milliseconds
@@ -59,9 +59,9 @@ lemlib::ControllerSettings lateral_controller(2.6,   // proportional gain (kP)
 );
 
 // angular PID controller
-lemlib::ControllerSettings angular_controller(1.7, // proportional gain (kP)
+lemlib::ControllerSettings angular_controller(2, // proportional gain (kP)
 											  0,   // integral gain (kI)
-											  15,  // derivative gain (kD)
+											  7,  // derivative gain (kD)
 											  0,   // anti windup
 											  0,   // small error range, in degrees
 											  0,   // small error range timeout, in milliseconds
@@ -208,14 +208,14 @@ void competition_initialize() {}
 
 void pidTUNE(){
 	while (true){
-	// chassis.turnToHeading(90,1000);
-	// pros::delay(2000);
-	// chassis.turnToHeading(0,1000);
-	// pros::delay(2000);
-	chassis.moveToPoint(0,48, 4000);
-	pros::delay(4000);
-	chassis.moveToPoint(0,0, 4000, {.forwards = false});
-	pros::delay(4000);
+	chassis.turnToHeading(90,1000);
+	pros::delay(2000);
+	chassis.turnToHeading(0,1000);
+	pros::delay(2000);
+	// chassis.moveToPoint(0,48, 4000);
+	// pros::delay(4000);
+	// chassis.moveToPoint(0,0, 4000, {.forwards = false});
+	// pros::delay(4000);
 	}
 }
 // bools
@@ -316,7 +316,16 @@ void autonright(){
 	pros::delay(20);
 	chassis.moveToPose(-12,-26,110, 4500);
 	pros::delay(4000);
-	chassis.moveToPose();
+	chassis.moveToPose(-23,-24,0,1500);
+	pros::delay(1500);
+	chassis.turnToHeading(40,1500);
+	intakeStationary();
+	pros::delay(1500);
+	
+	chassis.moveToPoint(-13,-15,1000);
+	pros::delay(1000);
+	intakeReverse();
+	//chassis.moveToPose();
 
 }
 void autonleft()
@@ -354,7 +363,8 @@ void autonleft()
 void autonomous()
 {
 	// pidTUNE();
-	autonleft();
+	//autonleft();
+	//autonright();
 }
 
 void opcontrol()
