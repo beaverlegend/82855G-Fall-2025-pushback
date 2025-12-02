@@ -15,76 +15,73 @@ This robot “Orbnot”, was our fall build. It was our testbed for:
       
       Subsystems that later moved into our Worlds robot
 
-![alt text](image-url)
+![alt text](FallROBOTImage.webp)
 
-(Replace with your actual image once you upload it.)
-
-What This Repo Includes
-
-/src – All PROS C++ source files
-
-/include – Headers and subsystem files
-
-/auton (if you created one) – Autonomous routines
-
-/deploy – Any extra scripts or configs
-
-config.hpp – Port and tuning info
-
-Example auton routes you can run out of the box
+This Repo Includes: 
+      src – All PROS C++ source files
+      
+      include – Headers and subsystem files
+      
+      auton (if you created one) – Autonomous routines
+      
+      deploy – Any extra scripts or configs
+      
+      config.hpp – Port and tuning info
+      
+      Example auton routes you can run out of the box
 
 How to Use This Code
 
-Install PROS (CLI or IDE).
-
-Clone this repo:
-
-git clone https://github.com/yourname/fall-pushback.git
-
-
-Open the folder in VSCode with PROS installed.
-
-Build:
-
-pros make
-
-
-Flash to your brain:
-
-pros mu
-
-
-Tweak your ports in config.hpp.
-
-Update PID values in your LemLib config before running auton.
-
-Use the controller menu or change the “default auton” index in autons.cpp.
-
-Features
+      Install PROS (CLI or IDE).
+      
+      Clone this repo:
+      
+      git clone https://github.com/yourname/fall-pushback.git
+      
+      
+      Open the folder in VSCode with PROS installed.
+      
+      Build:
+      
+      pros make
+      
+      
+      Flash to your brain:
+      
+      pros mu
+      
+      
+      Tweak your ports in config.hpp.
+      
+      Update PID values in your LemLib config before running auton.
+      
+      Use the controller menu or change the “default auton” index in autons.cpp.
+      
+      Features
 
 Basic drive code with LemLib
 
-Pushback routine triggered via controller
-
-Stable turning (fall tuning)
-
-Early wall-stake deployment logic
-
-Safe fails and timeouts to avoid runaway motors
-
-Clean folder structure for future expansion
+      Pushback routine triggered via controller
+      
+      Stable turning (fall tuning)
+      
+      Early wall-stake deployment logic
+      
+      Safe fails and timeouts to avoid runaway motors
+      
+      Clean folder structure for future expansion
 
 Things Still Being Improved
 
-Tuning values (they’re fall-season rough)
-
-Autonomous consistency
-
-Wall-stake deployment timing
-
-Motion chaining behavior
-
-Full odometry accuracy (only one tracking wheel in this version)
+      Tuning values (they’re fall-season rough)
+      
+      Autonomous consistency
+      
+      Wall-stake deployment timing
+      
+      Motion chaining behavior
+      
+      Full odometry accuracy (only one tracking wheel in this version)
 
 Credits
 
